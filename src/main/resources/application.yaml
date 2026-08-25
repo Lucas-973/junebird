@@ -1,0 +1,10 @@
+spring:
+  application:
+    name: junebird-pms
+  config:
+    import: optional:file:.env[.properties]
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}

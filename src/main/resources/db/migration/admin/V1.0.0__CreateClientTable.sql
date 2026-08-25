@@ -1,0 +1,6 @@
+CREATE TABLE client
+(
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    registered_name VARCHAR(200) NOT NULL,
+    trade_name VARCHAR(200)
+);
