@@ -10,6 +10,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,13 +37,24 @@ public class ClientDocumentService {
             return;
         }
 
+        Map<Long, ClientDocument> documentsById = client.getDocuments()
+                .stream()
+                .collect(Collectors.toMap(ClientDocument::getId, Function.identity()));
+
         if (changes.remove() != null) {
-            changes.remove().forEach(documentId -> remove(client, documentId));
+            Set<Long> documentIds = Set.copyOf(changes.remove());
+            documentIds.forEach(documentId ->
+                    findClientDocument(client, documentsById, documentId)
+            );
+
+            client.removeDocuments(documentIds);
             clientDocumentRepository.flush();
         }
 
         if (changes.update() != null) {
-            changes.update().forEach(document -> update(client.getId(), document));
+            changes.update().forEach(document ->
+                    update(client, documentsById, document)
+            );
         }
 
         if (changes.add() != null) {
@@ -57,8 +72,16 @@ public class ClientDocumentService {
         client.addDocument(document);
     }
 
-    private void update(Long clientId, ClientDocumentEditRequestDto dto) {
-        ClientDocument document = findClientDocument(clientId, dto.id());
+    private void update(
+            Client client,
+            Map<Long, ClientDocument> documentsById,
+            ClientDocumentEditRequestDto dto
+    ) {
+        ClientDocument document = findClientDocument(
+                client,
+                documentsById,
+                dto.id()
+        );
 
         if (dto.documentTypeId() != null) {
             document.setDocumentType(findDocumentType(dto.documentTypeId()));
@@ -69,17 +92,20 @@ public class ClientDocumentService {
         }
     }
 
-    private void remove(Client client, Long documentId) {
-        ClientDocument document = findClientDocument(client.getId(), documentId);
-        client.removeDocument(document);
-    }
+    private ClientDocument findClientDocument(
+            Client client,
+            Map<Long, ClientDocument> documentsById,
+            Long documentId
+    ) {
+        ClientDocument document = documentsById.get(documentId);
 
-    private ClientDocument findClientDocument(Long clientId, Long documentId) {
-        return clientDocumentRepository
-                .findByIdAndClientId(documentId, clientId)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Client document not found: " + documentId
-                ));
+        if (document == null || document.getClient() != client) {
+            throw new IllegalArgumentException(
+                    "Client document not found: " + documentId
+            );
+        }
+
+        return document;
     }
 
     private DocumentType findDocumentType(Long documentTypeId) {

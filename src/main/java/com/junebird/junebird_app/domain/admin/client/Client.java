@@ -7,6 +7,7 @@ import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Getter
@@ -36,9 +37,15 @@ public class Client {
         document.setClient(this);
     }
 
-    public void removeDocument(ClientDocument document) {
-        documents.remove(document);
-        document.setClient(null);
+    public void removeDocuments(Set<Long> documentIds) {
+        documents.removeIf(document -> {
+            if (!documentIds.contains(document.getId())) {
+                return false;
+            }
+
+            document.setClient(null);
+            return true;
+        });
     }
 
 }
